@@ -1,21 +1,26 @@
+import itertools
+import random
 import requests
 import time
-import itertools
+
+from queue import Queue
+from threading import Thread
+
 
 # leave the blank where the username should go as an asterisk (*)
 URL_SCHEME = "https://github.com/*"
 
 # this is the N for number of characters
-NUM_CHARACTERS = 2
+NUM_CHARACTERS = 3
 
 # to avoid getting rate-limited, this is a sleep delay between each call (in seconds)
-SLEEP_DURATION = 0
+SLEEP_DURATION = 0.15
 
 # these are all the characters that you want to be allowed in the combinations
-CHARS = "abcdefghijklmnopqrstuvwxyz0123456789"
+CHARS = "abcdefghijklmnopqrstuvwxyz"
 
 # store available username in a file, don't retry them on consecutive runs
-FILENAME = "available.txt"
+AVAILABLE_FILENAME = "available.txt"
 
 # if we've already checked a username we don't want to try it again
 UNAVAILABLE_FILENAME = "unavailable.txt"
@@ -24,33 +29,30 @@ UNAVAILABLE_FILENAME = "unavailable.txt"
 # this returns a dictionary of the following format:
 # { "aaa": False, "aab": False, ... }
 def generate_combinations(n):
-    combinations = {}
+    combinations = []
     list_of_characters = list(CHARS)
 
     for c in itertools.combinations(list_of_characters, NUM_CHARACTERS):
-        combinations[''.join(c)] = False
+        combinations.append(''.join(c))
 
+    random.shuffle(combinations)
     return combinations
 
 def maybe_sleep():
     if SLEEP_DURATION > 0:
         time.sleep(SLEEP_DURATION)
 
-def is_available(username):
+def check_availability(username):
     url_to_check = URL_SCHEME.replace("*", username)
     request = requests.get(url_to_check)
     print("checking username: {}, got status: {}".format(username, request.status_code))
-    if request.status_code == 404:
-        print("{} appears to be available!".format(username))
-        return True
-    else:
-        return False
+    return request.status_code
 
 def remove_newline(line):
     return line.strip()
 
-def get_confirmed_usernames():
-    with open(FILENAME, "r") as f:
+def get_available():
+    with open(AVAILABLE_FILENAME, "r") as f:
         usernames = []
         content = f.readlines()
 
@@ -59,7 +61,7 @@ def get_confirmed_usernames():
 
         return usernames
 
-def get_confirmed_unavailable():
+def get_unavailable():
     with open(UNAVAILABLE_FILENAME, "r") as f:
         usernames = []
         content = f.readlines()
@@ -69,32 +71,42 @@ def get_confirmed_unavailable():
 
         return usernames
 
-def write_to_file(usernames):
-    with open(FILENAME, "w") as f:
+def write_to_file(usernames, filename):
+    with open(filename, "w") as f:
         for u in usernames:
             user_with_newline = u + "\n"
             f.write(user_with_newline)
 
 def main():
-    potential_usernames = generate_combinations(NUM_CHARACTERS)
-    confirmed_usernames = get_confirmed_usernames()
-    confirmed_unavailable = get_confirmed_unavailable()
+    possible = generate_combinations(NUM_CHARACTERS)
+    available = get_available()
+    unavailable = get_unavailable()
 
     # remove any usernames that are already tested from potential_usernames
-    for u in confirmed_usernames:
+    for u in available:
         try:
-            potential_usernames.pop(u)
+            possible.pop(u)
         except KeyError:
             pass
 
     # run main loop to check each username
-    for u in potential_usernames:
+    for u in possible:
         maybe_sleep()
-        if is_available(u):
-            confirmed_usernames.append(u)
+        status = check_availability(u)
+        if status == 404:
+            available.append(u)
+        elif status == 200:
+            unavailable.append(u)
+        elif status == 429:
+            print("getting rate-limited, will sleep for a bit")
+            time.sleep(7)
+            possible.append(u)  # adding this to the end of the list to retry later
+        else:
+            pass
 
-    # write all confirmed usernames back to file
-    write_to_file(confirmed_usernames)
+    # write all confirmed usernames back to files
+    write_to_file(available, AVAILABLE_FILENAME)
+    write_to_file(available, UNAVAILABLE_FILENAME)
 
 if __name__ == "__main__":
     main()
