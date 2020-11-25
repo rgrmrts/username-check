@@ -26,8 +26,6 @@ AVAILABLE_FILENAME = "available.txt"
 UNAVAILABLE_FILENAME = "unavailable.txt"
 
 # generate all combinations of characters where n is the number of characters
-# this returns a dictionary of the following format:
-# { "aaa": False, "aab": False, ... }
 def generate_combinations(n):
     combinations = []
     list_of_characters = list(CHARS)
