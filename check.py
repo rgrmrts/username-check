@@ -11,7 +11,7 @@ from threading import Thread
 URL_SCHEME = "https://github.com/*"
 
 # this is the N for number of characters
-NUM_CHARACTERS = 3
+NUM_CHARACTERS = 4
 
 # to avoid getting rate-limited, this is a sleep delay between each call (in seconds)
 SLEEP_DURATION = 0.15
@@ -20,10 +20,10 @@ SLEEP_DURATION = 0.15
 CHARS = "qwertyuiopasdfghjklzxcvbnm"
 
 # store available username in a file, don't retry them on consecutive runs
-AVAILABLE_FILENAME = "available.txt"
+AVAILABLE_FILENAME = "lists/available-" + str(NUM_CHARACTERS) + ".txt"
 
 # if we've already checked a username we don't want to try it again
-UNAVAILABLE_FILENAME = "unavailable.txt"
+UNAVAILABLE_FILENAME = "lists/unavailable-" + str(NUM_CHARACTERS) + ".txt"
 
 # generate all combinations of characters where n is the number of characters
 def generate_combinations(n):
@@ -42,6 +42,7 @@ def maybe_sleep():
 
 def check_availability(username):
     url_to_check = URL_SCHEME.replace("*", username)
+    print("[?] checking username '{}'".format(username))
     request = requests.get(url_to_check)
     return request.status_code
 
@@ -93,12 +94,15 @@ def main():
             except ValueError:
                 pass
 
+        print("-- starting to test usernames")
+        print("-- tried: {}".format(len(unavailable)+len(available)))
+        print("-- remaining: {}".format(len(possible)))
         # run main loop to check each username
         for u in possible:
             maybe_sleep()
             status = check_availability(u)
             if status == 404:
-                print("> the username '{}' is available!".format(u))
+                print("[!] username '{}' is available".format(u))
                 available.append(u)
             elif status == 200:
                 unavailable.append(u)
