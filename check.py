@@ -17,7 +17,7 @@ NUM_CHARACTERS = 3
 SLEEP_DURATION = 0.15
 
 # these are all the characters that you want to be allowed in the combinations
-CHARS = "abcdefghijklmnopqrstuvwxyz"
+CHARS = "qwertyuiopasdfghjklzxcvbnm"
 
 # store available username in a file, don't retry them on consecutive runs
 AVAILABLE_FILENAME = "available.txt"
@@ -43,7 +43,6 @@ def maybe_sleep():
 def check_availability(username):
     url_to_check = URL_SCHEME.replace("*", username)
     request = requests.get(url_to_check)
-    print("checking username: {}, got status: {}".format(username, request.status_code))
     return request.status_code
 
 def remove_newline(line):
@@ -80,31 +79,41 @@ def main():
     available = get_available()
     unavailable = get_unavailable()
 
-    # remove any usernames that are already tested from potential_usernames
-    for u in available:
-        try:
-            possible.pop(u)
-        except KeyError:
-            pass
+    try:
+        # remove any usernames that are already tested
+        for u in available:
+            try:
+                possible.remove(u)
+            except ValueError:
+                pass
 
-    # run main loop to check each username
-    for u in possible:
-        maybe_sleep()
-        status = check_availability(u)
-        if status == 404:
-            available.append(u)
-        elif status == 200:
-            unavailable.append(u)
-        elif status == 429:
-            print("getting rate-limited, will sleep for a bit")
-            time.sleep(7)
-            possible.append(u)  # adding this to the end of the list to retry later
-        else:
-            pass
+        for u in unavailable:
+            try:
+                possible.remove(u)
+            except ValueError:
+                pass
 
-    # write all confirmed usernames back to files
-    write_to_file(available, AVAILABLE_FILENAME)
-    write_to_file(available, UNAVAILABLE_FILENAME)
+        # run main loop to check each username
+        for u in possible:
+            maybe_sleep()
+            status = check_availability(u)
+            if status == 404:
+                print("> the username '{}' is available!".format(u))
+                available.append(u)
+            elif status == 200:
+                unavailable.append(u)
+            elif status == 429:
+                print("getting rate-limited, will sleep for a bit")
+                time.sleep(7)
+                possible.append(u)  # adding this to the end of the list to retry later
+            else:
+                pass
+    except KeyboardInterrupt:
+        print("caught a CTRL-C... exiting")
+    finally:
+        # write all confirmed usernames back to files
+        write_to_file(available, AVAILABLE_FILENAME)
+        write_to_file(unavailable, UNAVAILABLE_FILENAME)
 
 if __name__ == "__main__":
     main()
