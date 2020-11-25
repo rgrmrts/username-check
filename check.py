@@ -11,10 +11,10 @@ from threading import Thread
 URL_SCHEME = "https://github.com/*"
 
 # this is the N for number of characters
-NUM_CHARACTERS = 4
+NUM_CHARACTERS = 3
 
 # to avoid getting rate-limited, this is a sleep delay between each call (in seconds)
-SLEEP_DURATION = 0.15
+SLEEP_DURATION = 0
 
 # these are all the characters that you want to be allowed in the combinations
 CHARS = "qwertyuiopasdfghjklzxcvbnm"
@@ -108,8 +108,7 @@ def main():
                 unavailable.append(u)
             elif status == 429:
                 print("getting rate-limited, will sleep for a bit")
-                time.sleep(7)
-                possible.append(u)  # adding this to the end of the list to retry later
+                time.sleep(10)
             else:
                 pass
     except KeyboardInterrupt:
