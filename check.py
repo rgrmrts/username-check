@@ -3,9 +3,6 @@ import random
 import requests
 import time
 
-from queue import Queue
-from threading import Thread
-
 
 # leave the blank where the username should go as an asterisk (*)
 URL_SCHEME = "https://github.com/*"
