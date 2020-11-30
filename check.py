@@ -33,10 +33,12 @@ def generate_combinations(n):
     random.shuffle(combinations)
     return combinations
 
+# sleep if SLEEP_DURATION is non-zero
 def maybe_sleep():
     if SLEEP_DURATION > 0:
         time.sleep(SLEEP_DURATION)
 
+# make the http request and return it's status (assumption is 404 is available)
 def check_availability(username):
     url_to_check = URL_SCHEME.replace("*", username)
     print("[?] checking username '{}'".format(username))
@@ -46,30 +48,33 @@ def check_availability(username):
 def remove_newline(line):
     return line.strip()
 
+# read all usernames in file previously marked available
 def get_available():
     with open(AVAILABLE_FILENAME, "r") as f:
         usernames = []
-        content = f.readlines()
+        file_usernames = f.readlines()
 
-        for c in content:
-            usernames.append(c.strip())
+        for name in file_usernames:
+            usernames.append(name.strip())
 
         return usernames
 
+# read all usernames in file previously marked unavailable
 def get_unavailable():
     with open(UNAVAILABLE_FILENAME, "r") as f:
         usernames = []
-        content = f.readlines()
+        file_usernames = f.readlines()
 
-        for c in content:
-            usernames.append(c.strip())
+        for name in file_usernames:
+            usernames.append(name.strip())
 
         return usernames
 
+# write a list of usernames to file
 def write_to_file(usernames, filename):
     with open(filename, "w") as f:
-        for u in usernames:
-            user_with_newline = u + "\n"
+        for name in usernames:
+            user_with_newline = name + "\n"
             f.write(user_with_newline)
 
 def main():
@@ -79,15 +84,15 @@ def main():
 
     try:
         # remove any usernames that are already tested
-        for u in available:
+        for name in available:
             try:
-                possible.remove(u)
+                possible.remove(name)
             except ValueError:
                 pass
 
-        for u in unavailable:
+        for name in unavailable:
             try:
-                possible.remove(u)
+                possible.remove(name)
             except ValueError:
                 pass
 
@@ -95,23 +100,25 @@ def main():
         print("-- tried: {}".format(len(unavailable)+len(available)))
         print("-- remaining: {}".format(len(possible)))
         # run main loop to check each username
-        for u in possible:
+        for name in possible:
             maybe_sleep()
-            status = check_availability(u)
+            status = check_availability(name)
             if status == 404:
-                print("[!] username '{}' is available".format(u))
-                available.append(u)
+                print("[!] username '{}' is available".format(name))
+                available.append(name)
             elif status == 200:
-                unavailable.append(u)
+                unavailable.append(name)
             elif status == 429:
                 print("getting rate-limited, will sleep for a bit")
                 time.sleep(10)
             else:
                 pass
+    # mosting just catching a CTRL-C so we still update our lists
     except KeyboardInterrupt:
         print("caught a CTRL-C... exiting")
+
+    # update list of usernames previously saved in file
     finally:
-        # write all confirmed usernames back to files
         write_to_file(available, AVAILABLE_FILENAME)
         write_to_file(unavailable, UNAVAILABLE_FILENAME)
 
